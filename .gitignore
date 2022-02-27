@@ -1,3 +1,7 @@
 .vs/
 Sources/Sandpipes.Core/obj/
 Sandpipes/obj/
+Sources/Sandpipes/bin/
+Sources/Sandpipes/obj/
+Tests/Sandpipes.Test/bin/
+Tests/Sandpipes.Test/obj/

@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31825.309
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sandpipes", "Sandpipes\Sandpipes.csproj", "{B9C759A8-BF74-4FD3-8CAD-83FD35606CF5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sandpipes", "Sources\Sandpipes\Sandpipes.csproj", "{2804C877-1718-4B7E-8A20-3ECBFC906B9D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sandpipes.Test", "Tests\Sandpipes.Test\Sandpipes.Test.csproj", "{3908A1D8-A900-4A0E-95FE-BA81975EBF21}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,10 +13,14 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B9C759A8-BF74-4FD3-8CAD-83FD35606CF5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B9C759A8-BF74-4FD3-8CAD-83FD35606CF5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B9C759A8-BF74-4FD3-8CAD-83FD35606CF5}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B9C759A8-BF74-4FD3-8CAD-83FD35606CF5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2804C877-1718-4B7E-8A20-3ECBFC906B9D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2804C877-1718-4B7E-8A20-3ECBFC906B9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2804C877-1718-4B7E-8A20-3ECBFC906B9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2804C877-1718-4B7E-8A20-3ECBFC906B9D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3908A1D8-A900-4A0E-95FE-BA81975EBF21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3908A1D8-A900-4A0E-95FE-BA81975EBF21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3908A1D8-A900-4A0E-95FE-BA81975EBF21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3908A1D8-A900-4A0E-95FE-BA81975EBF21}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -109,7 +109,11 @@ namespace Sandpipes.TPLDataflow
         public void CreatePipeline<TOutput>(Action<TOutput> resultCallback)
         {
             var lastStep = _steps.Last();
-            
+
+            if (lastStep == null)
+            {
+                throw new InvalidOperationException("Pipeline is empty and cannot add a result callback", new NullReferenceException("lastStep is null"));
+            }
 
             if (lastStep.IsAsync)
             {
@@ -145,7 +149,7 @@ namespace Sandpipes.TPLDataflow
         /// <param name="input"></param>
         public void Execute<TInput>(TInput input)
         {
-            var firstStep = _steps[0] as ITargetBlock<TInput>;
+            var firstStep = _steps[0].Block as ITargetBlock<TInput>;
 
             if (firstStep == null)
             {
