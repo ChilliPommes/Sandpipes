@@ -36,7 +36,7 @@ namespace Sandpipes.TPLDataflow
                         throw new InvalidOperationException("Last step could not be found, new step cannot be added.", new NullReferenceException("targetBlock is null"));
                     }
 
-                    targetBlock.LinkTo(step, new DataflowLinkOptions());
+                    targetBlock.LinkTo(step, new DataflowLinkOptions() { PropagateCompletion = true });
                     _steps.Add(new DataflowSandStep(step));
                 }
                 else
@@ -49,7 +49,7 @@ namespace Sandpipes.TPLDataflow
                         throw new InvalidOperationException("Last step could not be found, new step cannot be added.", new NullReferenceException("targetBlock is null"));
                     }
 
-                    targetBlock.LinkTo(step, new DataflowLinkOptions());
+                    targetBlock.LinkTo(step, new DataflowLinkOptions() { PropagateCompletion = true });
                     _steps.Add(new DataflowSandStep(step));
                 }
             }
@@ -82,7 +82,7 @@ namespace Sandpipes.TPLDataflow
                         throw new InvalidOperationException("Last step could not be found, new step cannot be added.", new NullReferenceException("targetBlock is null"));
                     }
 
-                    targetBlock.LinkTo(step, new DataflowLinkOptions());
+                    targetBlock.LinkTo(step, new DataflowLinkOptions() { PropagateCompletion = true });
                     _steps.Add(new DataflowSandStep(step, true));
                 }
                 else
@@ -95,7 +95,7 @@ namespace Sandpipes.TPLDataflow
                         throw new InvalidOperationException("Last step could not be found, new step cannot be added.", new NullReferenceException("targetBlock is null"));
                     }
 
-                    targetBlock.LinkTo(step, new DataflowLinkOptions());
+                    targetBlock.LinkTo(step, new DataflowLinkOptions() { PropagateCompletion = true });
                     _steps.Add(new DataflowSandStep(step, true));
                 }
             }
@@ -106,7 +106,7 @@ namespace Sandpipes.TPLDataflow
         /// </summary>
         /// <typeparam name="TOutput"></typeparam>
         /// <param name="resultCallback"></param>
-        public void CreatePipeline<TOutput>(Action<TOutput> resultCallback)
+        public Task CreatePipeline<TOutput>(Action<TOutput> resultCallback)
         {
             var lastStep = _steps.Last();
 
@@ -125,7 +125,9 @@ namespace Sandpipes.TPLDataflow
                 }
 
                 var callBackStep = new ActionBlock<Task<TOutput>>(async t => resultCallback(await t));
-                targetBlock.LinkTo(callBackStep);
+                targetBlock.LinkTo(callBackStep, new DataflowLinkOptions { PropagateCompletion = true });
+
+                return callBackStep.Completion;
             }
             else
             {
@@ -138,7 +140,9 @@ namespace Sandpipes.TPLDataflow
 
                 var callBackStep = new ActionBlock<TOutput>(t => resultCallback(t));
 
-                targetBlock.LinkTo(callBackStep);
+                targetBlock.LinkTo(callBackStep,new DataflowLinkOptions { PropagateCompletion = true });
+
+                return callBackStep.Completion;
             }
         }
 
@@ -157,6 +161,14 @@ namespace Sandpipes.TPLDataflow
             }
 
             firstStep.SendAsync(input);
+        }
+
+        /// <summary>
+        /// Completes the first step to signalize an stop of data input
+        /// </summary>
+        public void CompleteFirstStep()
+        {
+            _steps[0].Block.Complete();
         }
     }
 }
