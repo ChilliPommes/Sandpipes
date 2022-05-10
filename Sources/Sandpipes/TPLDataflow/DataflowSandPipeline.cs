@@ -15,11 +15,20 @@ namespace Sandpipes.TPLDataflow
         /// <typeparam name="TInput"></typeparam>
         /// <typeparam name="TOutput"></typeparam>
         /// <param name="stepFunc"></param>
-        public void AddStep<TInput, TOutput>(Func<TInput, TOutput> stepFunc)
+        /// <param name="boundedCapacity">BoundedCapacity - default -1 (Default from tpl dataflow)</param>
+        /// <param name="maxDegreeOfParallelism">MaxDegreeOfParallelism - default 1</param>
+        public void AddStep<TInput, TOutput>(Func<TInput, TOutput> stepFunc, int boundedCapacity = -1, int maxDegreeOfParallelism = 1)
         {
+            // Create execution options
+            ExecutionDataflowBlockOptions blockOptions = new ExecutionDataflowBlockOptions()
+            {
+                BoundedCapacity = boundedCapacity,
+                MaxDegreeOfParallelism = maxDegreeOfParallelism
+            };
+
             if (_steps.Count == 0)
             {
-                var block = new TransformBlock<TInput, TOutput>(stepFunc);
+                var block = new TransformBlock<TInput, TOutput>(stepFunc, blockOptions);
                 _steps.Add(new DataflowSandStep(block));
             }
             else
@@ -28,7 +37,7 @@ namespace Sandpipes.TPLDataflow
                 var lastStep = _steps.Last();
                 if (!lastStep.IsAsync)
                 {
-                    var step = new TransformBlock<TInput, TOutput>(stepFunc);
+                    var step = new TransformBlock<TInput, TOutput>(stepFunc, blockOptions);
                     var targetBlock = (lastStep.Block as ISourceBlock<TInput>);
 
                     if (targetBlock == null)
@@ -41,7 +50,7 @@ namespace Sandpipes.TPLDataflow
                 }
                 else
                 {
-                    var step = new TransformBlock<Task<TInput>, TOutput>(async (input) => stepFunc(await input));
+                    var step = new TransformBlock<Task<TInput>, TOutput>(async (input) => stepFunc(await input), blockOptions);
                     var targetBlock = (lastStep.Block as ISourceBlock<Task<TInput>>);
 
                     if (targetBlock == null)
@@ -62,11 +71,20 @@ namespace Sandpipes.TPLDataflow
         /// <typeparam name="TInput"></typeparam>
         /// <typeparam name="TOutput"></typeparam>
         /// <param name="stepFunc"></param>
-        public void AddStepAsync<TInput, TOutput>(Func<TInput, Task<TOutput>> stepFunc)
+        /// <param name="boundedCapacity">BoundedCapacity - default -1 (Default from tpl dataflow)</param>
+        /// <param name="maxDegreeOfParallelism">MaxDegreeOfParallelism - default 1</param>
+        public void AddStepAsync<TInput, TOutput>(Func<TInput, Task<TOutput>> stepFunc, int boundedCapacity = -1, int maxDegreeOfParallelism = 1)
         {
+            // Create execution options
+            ExecutionDataflowBlockOptions blockOptions = new ExecutionDataflowBlockOptions()
+            {
+                BoundedCapacity = boundedCapacity,
+                MaxDegreeOfParallelism = maxDegreeOfParallelism
+            };
+
             if (_steps.Count == 0)
             {
-                var step = new TransformBlock<TInput, Task<TOutput>>(async (input) => await stepFunc(input));
+                var step = new TransformBlock<TInput, Task<TOutput>>(async (input) => await stepFunc(input), blockOptions);
                 _steps.Add(new DataflowSandStep(step, true));
             }
             else
@@ -74,7 +92,7 @@ namespace Sandpipes.TPLDataflow
                 var lastStep = _steps.Last();
                 if (lastStep.IsAsync)
                 {
-                    var step = new TransformBlock<Task<TInput>, Task<TOutput>>(async (input) => await stepFunc(await input));
+                    var step = new TransformBlock<Task<TInput>, Task<TOutput>>(async (input) => await stepFunc(await input), blockOptions);
                     var targetBlock = (lastStep.Block as ISourceBlock<Task<TInput>>);
 
                     if (targetBlock == null)
@@ -87,7 +105,7 @@ namespace Sandpipes.TPLDataflow
                 }
                 else
                 {
-                    var step = new TransformBlock<TInput, Task<TOutput>>(async (input) => await stepFunc(input));
+                    var step = new TransformBlock<TInput, Task<TOutput>>(async (input) => await stepFunc(input), blockOptions);
                     var targetBlock = (lastStep.Block as ISourceBlock<TInput>);
 
                     if (targetBlock == null)
