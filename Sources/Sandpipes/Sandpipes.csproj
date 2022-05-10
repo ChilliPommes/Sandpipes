@@ -8,6 +8,7 @@
     <Version>1.1.1</Version>
     <Authors>Chillipommes</Authors>
     <Company>-</Company>
+    <Product>de.chillipommes.sandpipes</Product>
   </PropertyGroup>
 
   <ItemGroup>
