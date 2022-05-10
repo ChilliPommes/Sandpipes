@@ -3,23 +3,32 @@
 namespace Sandpipes.TPLDataflow
 {
     /// <summary>
-    /// 
+    /// Implements logic to fill, create and execute a TPL DataFlow pipeline
     /// </summary>
     public sealed class DataflowSandPipeline
     {
         private List<DataflowSandStep> _steps = new List<DataflowSandStep>();
 
         /// <summary>
-        /// 
+        /// Adds a step at the last position of the pipeline
         /// </summary>
         /// <typeparam name="TInput"></typeparam>
         /// <typeparam name="TOutput"></typeparam>
         /// <param name="stepFunc"></param>
-        public void AddStep<TInput, TOutput>(Func<TInput, TOutput> stepFunc)
+        /// <param name="boundedCapacity">BoundedCapacity - default -1 (Default from tpl dataflow)</param>
+        /// <param name="maxDegreeOfParallelism">MaxDegreeOfParallelism - default 1</param>
+        public void AddStep<TInput, TOutput>(Func<TInput, TOutput> stepFunc, int boundedCapacity = -1, int maxDegreeOfParallelism = 1)
         {
+            // Create execution options
+            ExecutionDataflowBlockOptions blockOptions = new ExecutionDataflowBlockOptions()
+            {
+                BoundedCapacity = boundedCapacity,
+                MaxDegreeOfParallelism = maxDegreeOfParallelism
+            };
+
             if (_steps.Count == 0)
             {
-                var block = new TransformBlock<TInput, TOutput>(stepFunc);
+                var block = new TransformBlock<TInput, TOutput>(stepFunc, blockOptions);
                 _steps.Add(new DataflowSandStep(block));
             }
             else
@@ -28,7 +37,7 @@ namespace Sandpipes.TPLDataflow
                 var lastStep = _steps.Last();
                 if (!lastStep.IsAsync)
                 {
-                    var step = new TransformBlock<TInput, TOutput>(stepFunc);
+                    var step = new TransformBlock<TInput, TOutput>(stepFunc, blockOptions);
                     var targetBlock = (lastStep.Block as ISourceBlock<TInput>);
 
                     if (targetBlock == null)
@@ -36,12 +45,12 @@ namespace Sandpipes.TPLDataflow
                         throw new InvalidOperationException("Last step could not be found, new step cannot be added.", new NullReferenceException("targetBlock is null"));
                     }
 
-                    targetBlock.LinkTo(step, new DataflowLinkOptions());
+                    targetBlock.LinkTo(step, new DataflowLinkOptions() { PropagateCompletion = true });
                     _steps.Add(new DataflowSandStep(step));
                 }
                 else
                 {
-                    var step = new TransformBlock<Task<TInput>, TOutput>(async (input) => stepFunc(await input));
+                    var step = new TransformBlock<Task<TInput>, TOutput>(async (input) => stepFunc(await input), blockOptions);
                     var targetBlock = (lastStep.Block as ISourceBlock<Task<TInput>>);
 
                     if (targetBlock == null)
@@ -49,7 +58,7 @@ namespace Sandpipes.TPLDataflow
                         throw new InvalidOperationException("Last step could not be found, new step cannot be added.", new NullReferenceException("targetBlock is null"));
                     }
 
-                    targetBlock.LinkTo(step, new DataflowLinkOptions());
+                    targetBlock.LinkTo(step, new DataflowLinkOptions() { PropagateCompletion = true });
                     _steps.Add(new DataflowSandStep(step));
                 }
             }
@@ -57,16 +66,25 @@ namespace Sandpipes.TPLDataflow
         }
 
         /// <summary>
-        /// 
+        /// Adds an async step on the last position of the pipeline
         /// </summary>
         /// <typeparam name="TInput"></typeparam>
         /// <typeparam name="TOutput"></typeparam>
         /// <param name="stepFunc"></param>
-        public void AddStepAsync<TInput, TOutput>(Func<TInput, Task<TOutput>> stepFunc)
+        /// <param name="boundedCapacity">BoundedCapacity - default -1 (Default from tpl dataflow)</param>
+        /// <param name="maxDegreeOfParallelism">MaxDegreeOfParallelism - default 1</param>
+        public void AddStepAsync<TInput, TOutput>(Func<TInput, Task<TOutput>> stepFunc, int boundedCapacity = -1, int maxDegreeOfParallelism = 1)
         {
+            // Create execution options
+            ExecutionDataflowBlockOptions blockOptions = new ExecutionDataflowBlockOptions()
+            {
+                BoundedCapacity = boundedCapacity,
+                MaxDegreeOfParallelism = maxDegreeOfParallelism
+            };
+
             if (_steps.Count == 0)
             {
-                var step = new TransformBlock<TInput, Task<TOutput>>(async (input) => await stepFunc(input));
+                var step = new TransformBlock<TInput, Task<TOutput>>(async (input) => await stepFunc(input), blockOptions);
                 _steps.Add(new DataflowSandStep(step, true));
             }
             else
@@ -74,7 +92,7 @@ namespace Sandpipes.TPLDataflow
                 var lastStep = _steps.Last();
                 if (lastStep.IsAsync)
                 {
-                    var step = new TransformBlock<Task<TInput>, Task<TOutput>>(async (input) => await stepFunc(await input));
+                    var step = new TransformBlock<Task<TInput>, Task<TOutput>>(async (input) => await stepFunc(await input), blockOptions);
                     var targetBlock = (lastStep.Block as ISourceBlock<Task<TInput>>);
 
                     if (targetBlock == null)
@@ -82,12 +100,12 @@ namespace Sandpipes.TPLDataflow
                         throw new InvalidOperationException("Last step could not be found, new step cannot be added.", new NullReferenceException("targetBlock is null"));
                     }
 
-                    targetBlock.LinkTo(step, new DataflowLinkOptions());
+                    targetBlock.LinkTo(step, new DataflowLinkOptions() { PropagateCompletion = true });
                     _steps.Add(new DataflowSandStep(step, true));
                 }
                 else
                 {
-                    var step = new TransformBlock<TInput, Task<TOutput>>(async (input) => await stepFunc(input));
+                    var step = new TransformBlock<TInput, Task<TOutput>>(async (input) => await stepFunc(input), blockOptions);
                     var targetBlock = (lastStep.Block as ISourceBlock<TInput>);
 
                     if (targetBlock == null)
@@ -95,18 +113,18 @@ namespace Sandpipes.TPLDataflow
                         throw new InvalidOperationException("Last step could not be found, new step cannot be added.", new NullReferenceException("targetBlock is null"));
                     }
 
-                    targetBlock.LinkTo(step, new DataflowLinkOptions());
+                    targetBlock.LinkTo(step, new DataflowLinkOptions() { PropagateCompletion = true });
                     _steps.Add(new DataflowSandStep(step, true));
                 }
             }
         }
 
         /// <summary>
-        /// 
+        /// Finalizes the pipeline and adds the call back action at the end of it
         /// </summary>
         /// <typeparam name="TOutput"></typeparam>
-        /// <param name="resultCallback"></param>
-        public void CreatePipeline<TOutput>(Action<TOutput> resultCallback)
+        /// <param name="resultCallback"><see cref="Task"/></param>
+        public Task CreatePipeline<TOutput>(Action<TOutput> resultCallback)
         {
             var lastStep = _steps.Last();
 
@@ -125,7 +143,9 @@ namespace Sandpipes.TPLDataflow
                 }
 
                 var callBackStep = new ActionBlock<Task<TOutput>>(async t => resultCallback(await t));
-                targetBlock.LinkTo(callBackStep);
+                targetBlock.LinkTo(callBackStep, new DataflowLinkOptions { PropagateCompletion = true });
+
+                return callBackStep.Completion;
             }
             else
             {
@@ -138,15 +158,17 @@ namespace Sandpipes.TPLDataflow
 
                 var callBackStep = new ActionBlock<TOutput>(t => resultCallback(t));
 
-                targetBlock.LinkTo(callBackStep);
+                targetBlock.LinkTo(callBackStep,new DataflowLinkOptions { PropagateCompletion = true });
+
+                return callBackStep.Completion;
             }
         }
 
         /// <summary>
-        /// 
+        /// Uses SendAsync to push an item into the pipeline
         /// </summary>
-        /// <typeparam name="TInput"></typeparam>
-        /// <param name="input"></param>
+        /// <typeparam name="TInput">Generic Type which is registered for the first pipeline step</typeparam>
+        /// <param name="input"><see cref="List{T}"/></param>
         public void Execute<TInput>(TInput input)
         {
             var firstStep = _steps[0].Block as ITargetBlock<TInput>;
@@ -157,6 +179,34 @@ namespace Sandpipes.TPLDataflow
             }
 
             firstStep.SendAsync(input);
+        }
+
+        /// <summary>
+        /// Uses SendAsync to push a set of items one by one into the pipeline
+        /// </summary>
+        /// <typeparam name="TInput">Generic Type which is registered for the first pipeline step</typeparam>
+        /// <param name="inputs"><see cref="List{T}"/></param>
+        public void ExecuteBulk<TInput>(List<TInput> inputs)
+        {
+            var firstStep = _steps[0].Block as ITargetBlock<TInput>;
+
+            if (firstStep == null)
+            {
+                throw new InvalidOperationException("Pipeline is empty and cannot be executed", new NullReferenceException("firstStep is null"));
+            }
+
+            foreach(var input in inputs)
+            {
+                firstStep.SendAsync(input);
+            }
+        }
+
+        /// <summary>
+        /// Completes the first step to signalize an stop of data input
+        /// </summary>
+        public void CompleteFirstStep()
+        {
+            _steps[0].Block.Complete();
         }
     }
 }
