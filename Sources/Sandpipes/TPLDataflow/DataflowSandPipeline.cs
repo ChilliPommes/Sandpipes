@@ -3,14 +3,14 @@
 namespace Sandpipes.TPLDataflow
 {
     /// <summary>
-    /// 
+    /// Implements logic to fill, create and execute a TPL DataFlow pipeline
     /// </summary>
     public sealed class DataflowSandPipeline
     {
         private List<DataflowSandStep> _steps = new List<DataflowSandStep>();
 
         /// <summary>
-        /// 
+        /// Adds a step at the last position of the pipeline
         /// </summary>
         /// <typeparam name="TInput"></typeparam>
         /// <typeparam name="TOutput"></typeparam>
@@ -57,7 +57,7 @@ namespace Sandpipes.TPLDataflow
         }
 
         /// <summary>
-        /// 
+        /// Adds an async step on the last position of the pipeline
         /// </summary>
         /// <typeparam name="TInput"></typeparam>
         /// <typeparam name="TOutput"></typeparam>
@@ -102,10 +102,10 @@ namespace Sandpipes.TPLDataflow
         }
 
         /// <summary>
-        /// 
+        /// Finalizes the pipeline and adds the call back action at the end of it
         /// </summary>
         /// <typeparam name="TOutput"></typeparam>
-        /// <param name="resultCallback"></param>
+        /// <param name="resultCallback"><see cref="Task"/></param>
         public Task CreatePipeline<TOutput>(Action<TOutput> resultCallback)
         {
             var lastStep = _steps.Last();
@@ -147,10 +147,10 @@ namespace Sandpipes.TPLDataflow
         }
 
         /// <summary>
-        /// 
+        /// Uses SendAsync to push an item into the pipeline
         /// </summary>
-        /// <typeparam name="TInput"></typeparam>
-        /// <param name="input"></param>
+        /// <typeparam name="TInput">Generic Type which is registered for the first pipeline step</typeparam>
+        /// <param name="input"><see cref="List{T}"/></param>
         public void Execute<TInput>(TInput input)
         {
             var firstStep = _steps[0].Block as ITargetBlock<TInput>;
@@ -161,6 +161,26 @@ namespace Sandpipes.TPLDataflow
             }
 
             firstStep.SendAsync(input);
+        }
+
+        /// <summary>
+        /// Uses SendAsync to push a set of items one by one into the pipeline
+        /// </summary>
+        /// <typeparam name="TInput">Generic Type which is registered for the first pipeline step</typeparam>
+        /// <param name="inputs"><see cref="List{T}"/></param>
+        public void ExecuteBulk<TInput>(List<TInput> inputs)
+        {
+            var firstStep = _steps[0].Block as ITargetBlock<TInput>;
+
+            if (firstStep == null)
+            {
+                throw new InvalidOperationException("Pipeline is empty and cannot be executed", new NullReferenceException("firstStep is null"));
+            }
+
+            foreach(var input in inputs)
+            {
+                firstStep.SendAsync(input);
+            }
         }
 
         /// <summary>
