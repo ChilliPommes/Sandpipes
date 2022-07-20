@@ -26,19 +26,19 @@ namespace Sandpipes.Test.TPLDataflowTests
         [Test]
         public void AddStep_Test()
         {
-            Assert.DoesNotThrow(() => pipeline.AddStep<string, string>(s => ""));
+            Assert.DoesNotThrow(() => pipeline.AddOneToOne<string, string>(s => ""));
         }
 
         [Test]
         public void AddStepAsync_Test()
         {
-            Assert.DoesNotThrow(() => pipeline.AddStep<string, Task<string>>(s => Task.FromResult("")));
+            Assert.DoesNotThrow(() => pipeline.AddOneToOne<string, Task<string>>(s => Task.FromResult("")));
         }
 
         [Test]
         public void CreatePipeline_Test()
         {
-            pipeline.AddStep<string, string>(s => "");
+            pipeline.AddOneToOne<string, string>(s => "");
 
             Assert.DoesNotThrow(() => pipeline.CreatePipeline<string>(s => { int a = 5; }));
         }
@@ -54,9 +54,9 @@ namespace Sandpipes.Test.TPLDataflowTests
         {
             string result = "";
 
-            pipeline.AddStep<string, string>(s => s.Replace("a", ""));
-            pipeline.AddStep<string, int>(s => s.Length);
-            pipeline.AddStep<int, string>(x => x.ToString());
+            pipeline.AddOneToOne<string, string>(s => s.Replace("a", ""));
+            pipeline.AddOneToOne<string, int>(s => s.Length);
+            pipeline.AddOneToOne<int, string>(x => x.ToString());
 
             pipeline.CreatePipeline<string>(s => { result = s; });
 
