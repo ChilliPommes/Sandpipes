@@ -84,7 +84,41 @@ namespace Sandpipes.TPLDataflow
 
             var block = new TransformManyBlock<TInput, TOutput>(stepFunc, blockOptions);
 
-            AddStep<TInput>(block);
+            if (_steps.Count == 0)
+            {
+                _steps.Add(new DataflowSandStep(block));
+            }
+            else
+            {
+
+                var lastStep = _steps.Last();
+                if (!lastStep.IsAsync)
+                {
+                    var targetBlock = (lastStep.Block as ISourceBlock<TInput>);
+
+                    if (targetBlock == null)
+                    {
+                        throw new InvalidOperationException("Last step could not be found, new step cannot be added.", new NullReferenceException("targetBlock is null"));
+                    }
+
+                    targetBlock.LinkTo((ITargetBlock<TInput>)block, new DataflowLinkOptions() { PropagateCompletion = true });
+                    _steps.Add(new DataflowSandStep(block));
+                }
+                else
+                {
+                    var asyncBlock = new TransformManyBlock<Task<TInput>, TOutput>(async (input) => stepFunc(await input));
+
+                    var targetBlock = (lastStep.Block as ISourceBlock<Task<TInput>>);
+
+                    if (targetBlock == null)
+                    {
+                        throw new InvalidOperationException("Last step could not be found, new step cannot be added.", new NullReferenceException("targetBlock is null"));
+                    }
+
+                    targetBlock.LinkTo((ITargetBlock<Task<TInput>>)asyncBlock, new DataflowLinkOptions() { PropagateCompletion = true });
+                    _steps.Add(new DataflowSandStep(asyncBlock));
+                }
+            }
         }
 
         private void AddStep<TInput>(IDataflowBlock dataflowBlock)
