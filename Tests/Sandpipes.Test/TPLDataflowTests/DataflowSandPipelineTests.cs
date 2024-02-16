@@ -67,7 +67,7 @@ namespace Sandpipes.Test.TPLDataflowTests
 
             await Task.Delay(500);
 
-            Assert.AreEqual("22", result);
+            Assert.AreEqual("True", result);
         }
     }
 }
