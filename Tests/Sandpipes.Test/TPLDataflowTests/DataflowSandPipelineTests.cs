@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
 using Sandpipes.TPLDataflow;
 using System;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace Sandpipes.Test.TPLDataflowTests
@@ -57,8 +58,10 @@ namespace Sandpipes.Test.TPLDataflowTests
             pipeline.AddOneToOne<string, string>(s => s.Replace("a", ""));
             pipeline.AddOneToOne<string, int>(s => s.Length);
             pipeline.AddOneToOne<int, string>(x => x.ToString());
+            pipeline.AddOneToOneAsync<string, string>(x => Task.FromResult("test"));
+            pipeline.AddOneToOne<string, bool>(x => true);
 
-            pipeline.CreatePipeline<string>(s => { result = s; });
+            pipeline.CreatePipeline<bool>(s => { result = s.ToString(); });
 
             pipeline.Execute("Hallo mein Name ist Hans.");
 
