@@ -7,7 +7,7 @@ namespace Sandpipes.TPLDataflow
     /// </summary>
     public sealed class DataflowSandPipeline
     {
-        private List<DataflowSandStep> _steps = new List<DataflowSandStep>();
+        private List<DataflowSandStep> _steps = new ();
 
         /// <summary>
         /// Adds a one to one step at the last position of the pipeline
@@ -20,7 +20,7 @@ namespace Sandpipes.TPLDataflow
         public void AddOneToOne<TInput, TOutput>(Func<TInput, TOutput> stepFunc, int boundedCapacity = -1, int maxDegreeOfParallelism = 1)
         {
             // Create execution options
-            ExecutionDataflowBlockOptions blockOptions = new ExecutionDataflowBlockOptions()
+            ExecutionDataflowBlockOptions blockOptions = new ExecutionDataflowBlockOptions
             {
                 BoundedCapacity = boundedCapacity,
                 MaxDegreeOfParallelism = maxDegreeOfParallelism
@@ -38,19 +38,19 @@ namespace Sandpipes.TPLDataflow
                 var lastStep = _steps.Last();
                 if (!lastStep.IsAsync)
                 {
-                    var targetBlock = (lastStep.Block as ISourceBlock<TInput>);
+                    var targetBlock = lastStep.Block as ISourceBlock<TInput>;
 
                     if (targetBlock == null)
                     {
                         throw new InvalidOperationException("Last step could not be found, new step cannot be added.", new NullReferenceException("targetBlock is null"));
                     }
 
-                    targetBlock.LinkTo((ITargetBlock<TInput>)block, new DataflowLinkOptions() { PropagateCompletion = true });
+                    targetBlock.LinkTo(block, new DataflowLinkOptions { PropagateCompletion = true });
                     _steps.Add(new DataflowSandStep(block));
                 }
                 else
                 {
-                    var asyncBlock = new TransformBlock<Task<TInput>, TOutput>(async (input) => stepFunc(await input));
+                    var asyncBlock = new TransformBlock<Task<TInput>, TOutput>(async input => stepFunc(await input));
 
                     var targetBlock = (lastStep.Block as ISourceBlock<Task<TInput>>);
 
@@ -59,7 +59,7 @@ namespace Sandpipes.TPLDataflow
                         throw new InvalidOperationException("Last step could not be found, new step cannot be added.", new NullReferenceException("targetBlock is null"));
                     }
 
-                    targetBlock.LinkTo((ITargetBlock<Task<TInput>>)asyncBlock, new DataflowLinkOptions() { PropagateCompletion = true });
+                    targetBlock.LinkTo(asyncBlock, new DataflowLinkOptions { PropagateCompletion = true });
                     _steps.Add(new DataflowSandStep(asyncBlock));
                 }
             }
@@ -94,36 +94,31 @@ namespace Sandpipes.TPLDataflow
                 var lastStep = _steps.Last();
                 if (!lastStep.IsAsync)
                 {
-                    var targetBlock = (lastStep.Block as ISourceBlock<TInput>);
+                    var targetBlock = lastStep.Block as ISourceBlock<TInput>;
 
                     if (targetBlock == null)
                     {
                         throw new InvalidOperationException("Last step could not be found, new step cannot be added.", new NullReferenceException("targetBlock is null"));
                     }
 
-                    targetBlock.LinkTo((ITargetBlock<TInput>)block, new DataflowLinkOptions() { PropagateCompletion = true });
+                    targetBlock.LinkTo(block, new DataflowLinkOptions { PropagateCompletion = true });
                     _steps.Add(new DataflowSandStep(block));
                 }
                 else
                 {
-                    var asyncBlock = new TransformManyBlock<Task<TInput>, TOutput>(async (input) => stepFunc(await input));
+                    var asyncBlock = new TransformManyBlock<Task<TInput>, TOutput>(async input => stepFunc(await input));
 
-                    var targetBlock = (lastStep.Block as ISourceBlock<Task<TInput>>);
+                    var targetBlock = lastStep.Block as ISourceBlock<Task<TInput>>;
 
                     if (targetBlock == null)
                     {
                         throw new InvalidOperationException("Last step could not be found, new step cannot be added.", new NullReferenceException("targetBlock is null"));
                     }
 
-                    targetBlock.LinkTo((ITargetBlock<Task<TInput>>)asyncBlock, new DataflowLinkOptions() { PropagateCompletion = true });
+                    targetBlock.LinkTo(asyncBlock, new DataflowLinkOptions { PropagateCompletion = true });
                     _steps.Add(new DataflowSandStep(asyncBlock));
                 }
             }
-        }
-
-        private void AddStep<TInput>(IDataflowBlock dataflowBlock)
-        {
-            
         }
 
         /// <summary>
@@ -181,10 +176,12 @@ namespace Sandpipes.TPLDataflow
         }
 
         /// <summary>
-        /// Finalizes the pipeline and adds the call back action at the end of it
+        /// Finalizes the pipeline and links a synchronous callback action to the last step.
         /// </summary>
-        /// <typeparam name="TOutput"></typeparam>
-        /// <param name="resultCallback"><see cref="Task"/></param>
+        /// <typeparam name="TOutput">The type of output produced by the final pipeline step.</typeparam>
+        /// <param name="resultCallback">The action invoked for each produced item.</param>
+        /// <returns>A <see cref="Task"/> that represents the completion of the callback step.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when the pipeline is empty or the last step cannot be linked to the callback.</exception>
         public Task CreatePipeline<TOutput>(Action<TOutput> resultCallback)
         {
             var lastStep = _steps.Last();
@@ -218,6 +215,53 @@ namespace Sandpipes.TPLDataflow
                 }
 
                 var callBackStep = new ActionBlock<TOutput>(t => resultCallback(t));
+
+                targetBlock.LinkTo(callBackStep,new DataflowLinkOptions { PropagateCompletion = true });
+
+                return callBackStep.Completion;
+            }
+        }
+
+        /// <summary>
+        /// Finalizes the pipeline and links an asynchronous callback function to the last step.
+        /// </summary>
+        /// <typeparam name="TOutput">The type of output produced by the final pipeline step.</typeparam>
+        /// <param name="resultCallback">The asynchronous function invoked for each produced item.</param>
+        /// <returns>A <see cref="Task"/> that represents the completion of the callback step.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when the pipeline is empty or the last step cannot be linked to the callback.</exception>
+        public Task CreatePipeline<TOutput>(Func<TOutput, Task> resultCallback)
+        {
+            var lastStep = _steps.Last();
+
+            if (lastStep == null)
+            {
+                throw new InvalidOperationException("Pipeline is empty and cannot add a result callback", new NullReferenceException("lastStep is null"));
+            }
+
+            if (lastStep.IsAsync)
+            {
+                var targetBlock = (lastStep.Block as ISourceBlock<Task<TOutput>>);
+
+                if (targetBlock == null)
+                {
+                    throw new InvalidOperationException("Pipeline is empty and cannot add a result callback", new NullReferenceException("targetBlock is null"));
+                }
+
+                var callBackStep = new ActionBlock<Task<TOutput>>(async t => await resultCallback(await t));
+                targetBlock.LinkTo(callBackStep, new DataflowLinkOptions { PropagateCompletion = true });
+
+                return callBackStep.Completion;
+            }
+            else
+            {
+                var targetBlock = (lastStep.Block as ISourceBlock<TOutput>);
+
+                if (targetBlock == null)
+                {
+                    throw new InvalidOperationException("Pipeline is empty and cannot add a result callback", new NullReferenceException("targetBlock is null"));
+                }
+
+                var callBackStep = new ActionBlock<TOutput>(resultCallback);
 
                 targetBlock.LinkTo(callBackStep,new DataflowLinkOptions { PropagateCompletion = true });
 
